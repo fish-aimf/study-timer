@@ -454,6 +454,8 @@
       e.returnValue = '';
     }
   });
+
+  document.addEventListener('keydown', e => {
     if (e.key === ' ' && running) {
       e.preventDefault();
       timeLeft += addPerSpace;
