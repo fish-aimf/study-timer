@@ -6,7 +6,6 @@
 <title>Study Timer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0a0a0a;
@@ -18,15 +17,13 @@
     overflow: hidden;
     user-select: none;
   }
-
   #setup {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 32px;
+    gap: 28px;
     width: 320px;
   }
-
   #setup h1 {
     font-size: 15px;
     font-weight: 400;
@@ -34,21 +31,18 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-
   .field {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-
   .field label {
     font-size: 11px;
     color: rgba(255,255,255,0.3);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-
   .field input {
     background: rgba(255,255,255,0.06);
     border: 0.5px solid rgba(255,255,255,0.12);
@@ -62,15 +56,8 @@
     text-align: center;
     transition: border-color 0.2s;
   }
-
-  .field input:focus {
-    border-color: rgba(255,255,255,0.35);
-  }
-
-  .field input::placeholder {
-    color: rgba(255,255,255,0.15);
-  }
-
+  .field input:focus { border-color: rgba(255,255,255,0.35); }
+  .field input::placeholder { color: rgba(255,255,255,0.15); }
   #start-btn {
     background: rgba(255,255,255,0.08);
     border: 0.5px solid rgba(255,255,255,0.18);
@@ -83,24 +70,26 @@
     transition: background 0.15s, border-color 0.15s;
     width: 100%;
   }
-
   #start-btn:hover {
     background: rgba(255,255,255,0.13);
     border-color: rgba(255,255,255,0.3);
     color: #fff;
   }
-
+  #total-studied {
+    font-size: 11px;
+    color: rgba(255,255,255,0.18);
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
   #timer-screen {
     display: none;
     flex-direction: column;
     align-items: center;
-    gap: 0;
     position: relative;
     width: 100%;
     height: 100vh;
     justify-content: center;
   }
-
   #time-display {
     font-size: clamp(80px, 18vw, 160px);
     font-weight: 200;
@@ -110,21 +99,19 @@
     color: #fff;
     font-variant-numeric: tabular-nums;
   }
-
-  #time-display.danger {
-    color: #ff4444;
-  }
-
+  #time-display.danger { color: #ff4444; }
   #time-display.critical {
     color: #ff1111;
     animation: pulse 0.5s infinite alternate;
   }
-
+  #time-display.negative {
+    color: #ff0000;
+    animation: pulse 0.3s infinite alternate;
+  }
   @keyframes pulse {
     from { opacity: 1; }
-    to { opacity: 0.5; }
+    to { opacity: 0.4; }
   }
-
   #add-amount-control {
     position: fixed;
     bottom: 32px;
@@ -133,14 +120,12 @@
     align-items: center;
     gap: 10px;
   }
-
   #add-amount-control label {
     font-size: 11px;
     color: rgba(255,255,255,0.25);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-
   #add-amount {
     background: transparent;
     border: none;
@@ -152,46 +137,42 @@
     width: 44px;
     text-align: center;
   }
-
   #add-amount:focus {
     color: rgba(255,255,255,0.8);
     border-bottom-color: rgba(255,255,255,0.5);
   }
-
   #add-amount-control span {
     font-size: 11px;
     color: rgba(255,255,255,0.2);
   }
-
   #flash {
     position: fixed;
     inset: 0;
     background: rgba(255,255,255,0.04);
     pointer-events: none;
     opacity: 0;
-    border-radius: 0;
   }
-
   #game-over {
     display: none;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 20px;
     text-align: center;
   }
-
   #game-over h2 {
     font-size: 48px;
     font-weight: 200;
     color: #ff4444;
     letter-spacing: -0.02em;
   }
-
   #game-over p {
     font-size: 13px;
     color: rgba(255,255,255,0.3);
   }
-
+  #total-msg {
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+  }
   #restart-btn {
     background: transparent;
     border: 0.5px solid rgba(255,255,255,0.18);
@@ -201,14 +182,12 @@
     color: rgba(255,255,255,0.5);
     cursor: pointer;
     transition: all 0.15s;
-    margin-top: 8px;
+    margin-top: 4px;
   }
-
   #restart-btn:hover {
     border-color: rgba(255,255,255,0.35);
     color: rgba(255,255,255,0.9);
   }
-
   #hint {
     position: fixed;
     bottom: 32px;
@@ -220,8 +199,8 @@
     text-transform: uppercase;
     pointer-events: none;
     transition: opacity 0.5s;
+    white-space: nowrap;
   }
-
   #progress-bar {
     position: fixed;
     bottom: 0;
@@ -231,10 +210,7 @@
     transition: width 0.9s linear, background-color 0.4s;
     width: 100%;
   }
-
-  #progress-bar.danger {
-    background: rgba(255,68,68,0.6);
-  }
+  #progress-bar.danger { background: rgba(255,68,68,0.6); }
 </style>
 </head>
 <body>
@@ -250,6 +226,7 @@
     <input type="number" id="add-time" placeholder="15" min="1" value="">
   </div>
   <button id="start-btn">Start</button>
+  <div id="total-studied"></div>
 </div>
 
 <div id="timer-screen">
@@ -266,6 +243,7 @@
 <div id="game-over">
   <h2>Time's up.</h2>
   <p id="score-msg"></p>
+  <div id="total-msg"></div>
   <button id="restart-btn">Try again</button>
 </div>
 
@@ -277,8 +255,9 @@
   let addPerSpace = 15;
   let interval = null;
   let spaceCount = 0;
-  let hintTimer = null;
   let running = false;
+  let sessionStart = null;
+  let db = null;
 
   const setupEl = document.getElementById('setup');
   const timerScreen = document.getElementById('timer-screen');
@@ -289,18 +268,99 @@
   const hintEl = document.getElementById('hint');
   const flashEl = document.getElementById('flash');
 
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('StudyTimerDB', 2);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains('sessions')) {
+          d.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+        }
+        if (!d.objectStoreNames.contains('meta')) {
+          d.createObjectStore('meta', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror = e => reject(e);
+    });
+  }
+
+  function incrementVisits() {
+    if (!db) return;
+    const tx = db.transaction('meta', 'readwrite');
+    const store = tx.objectStore('meta');
+    const req = store.get('visits');
+    req.onsuccess = e => {
+      const cur = e.target.result ? e.target.result.value : 0;
+      store.put({ key: 'visits', value: cur + 1 });
+    };
+  }
+
+  function getVisits() {
+    return new Promise((resolve) => {
+      if (!db) return resolve(0);
+      const tx = db.transaction('meta', 'readonly');
+      const req = tx.objectStore('meta').get('visits');
+      req.onsuccess = e => resolve(e.target.result ? e.target.result.value : 0);
+      req.onerror = () => resolve(0);
+    });
+  }
+
+  function saveSession(seconds) {
+    if (!db) return;
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').add({ date: Date.now(), seconds });
+  }
+
+  function getTotalStudied() {
+    return new Promise((resolve) => {
+      if (!db) return resolve(0);
+      const tx = db.transaction('sessions', 'readonly');
+      const req = tx.objectStore('sessions').getAll();
+      req.onsuccess = e => {
+        const total = (e.target.result || []).reduce((a, s) => a + s.seconds, 0);
+        resolve(total);
+      };
+      req.onerror = () => resolve(0);
+    });
+  }
+
+  function fmtDuration(s) {
+    if (s < 60) return s + 's';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm';
+  }
+
+  async function showTotalOnSetup() {
+    const [total, visits] = await Promise.all([getTotalStudied(), getVisits()]);
+    const el = document.getElementById('total-studied');
+    const parts = [];
+    if (total > 0) parts.push(fmtDuration(total) + ' studied total');
+    if (visits > 0) parts.push(visits + ' visit' + (visits === 1 ? '' : 's'));
+    el.textContent = parts.join(' · ');
+  }
+
+  openDB().then(d => { db = d; incrementVisits(); showTotalOnSetup(); }).catch(() => {});
+
   function fmt(s) {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    const neg = s < 0;
+    const abs = Math.abs(s);
+    const m = Math.floor(abs / 60);
+    const sec = Math.floor(abs % 60);
+    return (neg ? '-' : '') + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
   }
 
   function updateDisplay() {
     display.textContent = fmt(timeLeft);
-    const ratio = timeLeft / maxTime;
+    const ratio = Math.max(0, timeLeft / maxTime);
     progressBar.style.width = (ratio * 100) + '%';
 
-    if (timeLeft <= 10) {
+    if (timeLeft < 0) {
+      display.className = 'negative';
+      progressBar.className = 'danger';
+    } else if (timeLeft <= 10) {
       display.className = 'critical';
       progressBar.className = 'danger';
     } else if (timeLeft <= 20) {
@@ -314,31 +374,28 @@
 
   function tick() {
     timeLeft -= 1;
-    if (timeLeft <= 0) {
-      timeLeft = 0;
-      updateDisplay();
-      endGame();
-      return;
-    }
     updateDisplay();
+
   }
 
   function endGame() {
     clearInterval(interval);
     running = false;
+    const elapsed = Math.max(1, Math.round((Date.now() - sessionStart) / 1000));
+    saveSession(elapsed);
     timerScreen.style.display = 'none';
     gameOverEl.style.display = 'flex';
     document.getElementById('score-msg').textContent =
       spaceCount === 1 ? '1 question solved' : spaceCount + ' questions solved';
+    getTotalStudied().then(total => {
+      document.getElementById('total-msg').textContent =
+        total > 0 ? fmtDuration(total) + ' studied total' : '';
+    });
   }
 
   function flashScreen() {
     flashEl.style.opacity = '1';
     setTimeout(() => { flashEl.style.opacity = '0'; }, 120);
-  }
-
-  function hideHint() {
-    hintEl.style.opacity = '0';
   }
 
   document.getElementById('start-btn').addEventListener('click', () => {
@@ -347,12 +404,10 @@
     startTimer(st, at);
   });
 
-  document.getElementById('start-time').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('start-btn').click();
-  });
-
-  document.getElementById('add-time').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('start-btn').click();
+  ['start-time','add-time'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('start-btn').click();
+    });
   });
 
   function startTimer(st, at) {
@@ -360,6 +415,7 @@
     maxTime = st;
     addPerSpace = at;
     spaceCount = 0;
+    sessionStart = Date.now();
     addAmountInput.value = at;
     setupEl.style.display = 'none';
     gameOverEl.style.display = 'none';
@@ -368,12 +424,13 @@
     running = true;
     updateDisplay();
     interval = setInterval(tick, 1000);
-    hintTimer = setTimeout(hideHint, 3000);
+    setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
 
   document.getElementById('restart-btn').addEventListener('click', () => {
     gameOverEl.style.display = 'none';
     setupEl.style.display = 'flex';
+    showTotalOnSetup();
   });
 
   addAmountInput.addEventListener('input', () => {
