@@ -112,6 +112,14 @@
     from { opacity: 1; }
     to { opacity: 0.4; }
   }
+  #live-total {
+    font-size: 13px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.06em;
+    margin-top: 16px;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s;
+  }
   #add-amount-control {
     position: fixed;
     bottom: 32px;
@@ -231,6 +239,7 @@
 
 <div id="timer-screen">
   <div id="time-display">00:00</div>
+  <div id="live-total"></div>
   <div id="add-amount-control">
     <label>+sec</label>
     <input type="number" id="add-amount" min="1" max="999">
@@ -258,11 +267,14 @@
   let running = false;
   let sessionStart = null;
   let db = null;
+  let baseTotalSeconds = 0; // total from DB before this session
+  let currentSessionSeconds = 0; // seconds elapsed this session
 
   const setupEl = document.getElementById('setup');
   const timerScreen = document.getElementById('timer-screen');
   const gameOverEl = document.getElementById('game-over');
   const display = document.getElementById('time-display');
+  const liveTotalEl = document.getElementById('live-total');
   const progressBar = document.getElementById('progress-bar');
   const addAmountInput = document.getElementById('add-amount');
   const hintEl = document.getElementById('hint');
@@ -270,12 +282,9 @@
 
   function openDB() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('StudyTimerDB', 2);
+      const req = indexedDB.open('StudyTimerDB', 1);
       req.onupgradeneeded = e => {
         const d = e.target.result;
-        if (!d.objectStoreNames.contains('sessions')) {
-          d.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-        }
         if (!d.objectStoreNames.contains('meta')) {
           d.createObjectStore('meta', { keyPath: 'key' });
         }
@@ -285,64 +294,48 @@
     });
   }
 
-  function incrementVisits() {
-    if (!db) return;
-    const tx = db.transaction('meta', 'readwrite');
-    const store = tx.objectStore('meta');
-    const req = store.get('visits');
-    req.onsuccess = e => {
-      const cur = e.target.result ? e.target.result.value : 0;
-      store.put({ key: 'visits', value: cur + 1 });
-    };
-  }
-
-  function getVisits() {
+  function dbGet(key) {
     return new Promise((resolve) => {
-      if (!db) return resolve(0);
+      if (!db) return resolve(null);
       const tx = db.transaction('meta', 'readonly');
-      const req = tx.objectStore('meta').get('visits');
-      req.onsuccess = e => resolve(e.target.result ? e.target.result.value : 0);
-      req.onerror = () => resolve(0);
+      const req = tx.objectStore('meta').get(key);
+      req.onsuccess = e => resolve(e.target.result ? e.target.result.value : null);
+      req.onerror = () => resolve(null);
     });
   }
 
-  function saveSession(seconds) {
+  function dbSet(key, value) {
     if (!db) return;
-    const tx = db.transaction('sessions', 'readwrite');
-    tx.objectStore('sessions').add({ date: Date.now(), seconds });
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put({ key, value });
   }
 
   function getTotalStudied() {
-    return new Promise((resolve) => {
-      if (!db) return resolve(0);
-      const tx = db.transaction('sessions', 'readonly');
-      const req = tx.objectStore('sessions').getAll();
-      req.onsuccess = e => {
-        const total = (e.target.result || []).reduce((a, s) => a + s.seconds, 0);
-        resolve(total);
-      };
-      req.onerror = () => resolve(0);
-    });
+    return dbGet('totalSeconds').then(v => v || 0);
   }
 
   function fmtDuration(s) {
+    s = Math.floor(s);
     if (s < 60) return s + 's';
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
     if (h > 0) return h + 'h ' + m + 'm';
-    return m + 'm';
+    return m + 'm ' + sec + 's';
   }
 
   async function showTotalOnSetup() {
-    const [total, visits] = await Promise.all([getTotalStudied(), getVisits()]);
+    const total = await getTotalStudied();
     const el = document.getElementById('total-studied');
-    const parts = [];
-    if (total > 0) parts.push(fmtDuration(total) + ' studied total');
-    if (visits > 0) parts.push(visits + ' visit' + (visits === 1 ? '' : 's'));
-    el.textContent = parts.join(' · ');
+    el.textContent = total > 0 ? fmtDuration(total) + ' studied total' : '';
   }
 
-  openDB().then(d => { db = d; incrementVisits(); showTotalOnSetup(); }).catch(() => {});
+  openDB().then(d => { db = d; showTotalOnSetup(); }).catch(() => {});
+
+  function updateLiveTotal() {
+    const total = baseTotalSeconds + currentSessionSeconds;
+    liveTotalEl.textContent = fmtDuration(total) + ' total';
+  }
 
   function fmt(s) {
     const neg = s < 0;
@@ -374,23 +367,23 @@
 
   function tick() {
     timeLeft -= 1;
+    currentSessionSeconds += 1;
+    // Save to DB every second so closing tab doesn't lose progress
+    dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds);
     updateDisplay();
-
+    updateLiveTotal();
   }
 
   function endGame() {
     clearInterval(interval);
     running = false;
-    const elapsed = Math.max(1, Math.round((Date.now() - sessionStart) / 1000));
-    saveSession(elapsed);
     timerScreen.style.display = 'none';
     gameOverEl.style.display = 'flex';
     document.getElementById('score-msg').textContent =
       spaceCount === 1 ? '1 question solved' : spaceCount + ' questions solved';
-    getTotalStudied().then(total => {
-      document.getElementById('total-msg').textContent =
-        total > 0 ? fmtDuration(total) + ' studied total' : '';
-    });
+    const total = baseTotalSeconds + currentSessionSeconds;
+    document.getElementById('total-msg').textContent =
+      total > 0 ? fmtDuration(total) + ' studied total' : '';
   }
 
   function flashScreen() {
@@ -410,7 +403,9 @@
     });
   });
 
-  function startTimer(st, at) {
+  async function startTimer(st, at) {
+    baseTotalSeconds = await getTotalStudied();
+    currentSessionSeconds = 0;
     timeLeft = st;
     maxTime = st;
     addPerSpace = at;
@@ -423,6 +418,7 @@
     hintEl.style.opacity = '1';
     running = true;
     updateDisplay();
+    updateLiveTotal();
     interval = setInterval(tick, 1000);
     setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
