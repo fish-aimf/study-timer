@@ -10,11 +10,11 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0a0a0a;
     color: #fff;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
     user-select: none;
   }
   #setup {
@@ -22,7 +22,8 @@
     flex-direction: column;
     align-items: center;
     gap: 28px;
-    width: 320px;
+    width: 360px;
+    padding: 32px 0;
   }
   #setup h1 {
     font-size: 15px;
@@ -31,18 +32,8 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .field {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .field label {
-    font-size: 11px;
-    color: rgba(255,255,255,0.3);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+  .field { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .field label { font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; text-transform: uppercase; }
   .field input {
     background: rgba(255,255,255,0.06);
     border: 0.5px solid rgba(255,255,255,0.12);
@@ -70,17 +61,111 @@
     transition: background 0.15s, border-color 0.15s;
     width: 100%;
   }
-  #start-btn:hover {
-    background: rgba(255,255,255,0.13);
-    border-color: rgba(255,255,255,0.3);
-    color: #fff;
+  #start-btn:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.3); color: #fff; }
+  #total-studied { font-size: 11px; color: rgba(255,255,255,0.18); letter-spacing: 0.06em; text-align: center; }
+
+  /* Heatmap */
+  #heatmap-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  #total-studied {
+  #heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #heatmap-header span {
     font-size: 11px;
-    color: rgba(255,255,255,0.18);
-    letter-spacing: 0.06em;
-    text-align: center;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
+  #heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  #heatmap-legend span { font-size: 10px; color: rgba(255,255,255,0.2); }
+  .legend-cell {
+    width: 10px; height: 10px; border-radius: 2px;
+  }
+  #heatmap-scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 4px;
+    position: relative;
+  }
+  #heatmap-scroll::-webkit-scrollbar { height: 3px; }
+  #heatmap-scroll::-webkit-scrollbar-track { background: transparent; }
+  #heatmap-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  #heatmap-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+  }
+  #month-labels {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 2px;
+    height: 14px;
+    position: relative;
+  }
+  #heatmap-body { display: flex; gap: 3px; }
+  #day-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-right: 4px;
+    padding-top: 16px;
+  }
+  .day-label {
+    width: 16px;
+    height: 11px;
+    font-size: 9px;
+    color: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  #heatmap-cols { display: flex; gap: 3px; position: relative; }
+  .heatmap-col { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap-cell {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.1s;
+    position: relative;
+  }
+  .heatmap-cell:hover { opacity: 0.75; }
+  .cell-empty { background: rgba(255,255,255,0.06); }
+  .cell-l1 { background: #0e4429; }
+  .cell-l2 { background: #006d32; }
+  .cell-l3 { background: #26a641; }
+  .cell-l4 { background: #39d353; }
+  .cell-today { outline: 1px solid rgba(255,255,255,0.5); outline-offset: 1px; }
+
+  /* Tooltip */
+  #hm-tooltip {
+    position: fixed;
+    background: rgba(20,20,20,0.96);
+    border: 0.5px solid rgba(255,255,255,0.18);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+    display: none;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+
+  /* Timer screen */
   #timer-screen {
     display: none;
     flex-direction: column;
@@ -100,124 +185,24 @@
     font-variant-numeric: tabular-nums;
   }
   #time-display.danger { color: #ff4444; }
-  #time-display.critical {
-    color: #ff1111;
-    animation: pulse 0.5s infinite alternate;
-  }
-  #time-display.negative {
-    color: #ff0000;
-    animation: pulse 0.3s infinite alternate;
-  }
-  @keyframes pulse {
-    from { opacity: 1; }
-    to { opacity: 0.4; }
-  }
-  #live-total {
-    font-size: 13px;
-    color: rgba(255,255,255,0.2);
-    letter-spacing: 0.06em;
-    margin-top: 16px;
-    font-variant-numeric: tabular-nums;
-    transition: color 0.3s;
-  }
-  #add-amount-control {
-    position: fixed;
-    bottom: 32px;
-    right: 32px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  #add-amount-control label {
-    font-size: 11px;
-    color: rgba(255,255,255,0.25);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  #add-amount {
-    background: transparent;
-    border: none;
-    border-bottom: 0.5px solid rgba(255,255,255,0.2);
-    padding: 2px 4px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.45);
-    outline: none;
-    width: 44px;
-    text-align: center;
-  }
-  #add-amount:focus {
-    color: rgba(255,255,255,0.8);
-    border-bottom-color: rgba(255,255,255,0.5);
-  }
-  #add-amount-control span {
-    font-size: 11px;
-    color: rgba(255,255,255,0.2);
-  }
-  #flash {
-    position: fixed;
-    inset: 0;
-    background: rgba(255,255,255,0.04);
-    pointer-events: none;
-    opacity: 0;
-  }
-  #game-over {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    text-align: center;
-  }
-  #game-over h2 {
-    font-size: 48px;
-    font-weight: 200;
-    color: #ff4444;
-    letter-spacing: -0.02em;
-  }
-  #game-over p {
-    font-size: 13px;
-    color: rgba(255,255,255,0.3);
-  }
-  #total-msg {
-    font-size: 11px;
-    color: rgba(255,255,255,0.2);
-  }
-  #restart-btn {
-    background: transparent;
-    border: 0.5px solid rgba(255,255,255,0.18);
-    border-radius: 8px;
-    padding: 10px 32px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.5);
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-top: 4px;
-  }
-  #restart-btn:hover {
-    border-color: rgba(255,255,255,0.35);
-    color: rgba(255,255,255,0.9);
-  }
-  #hint {
-    position: fixed;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    color: rgba(255,255,255,0.15);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    pointer-events: none;
-    transition: opacity 0.5s;
-    white-space: nowrap;
-  }
-  #progress-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    height: 2px;
-    background: rgba(255,255,255,0.2);
-    transition: width 0.9s linear, background-color 0.4s;
-    width: 100%;
-  }
+  #time-display.critical { color: #ff1111; animation: pulse 0.5s infinite alternate; }
+  #time-display.negative { color: #ff0000; animation: pulse 0.3s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
+  #live-total { font-size: 13px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; margin-top: 16px; font-variant-numeric: tabular-nums; }
+  #add-amount-control { position: fixed; bottom: 32px; right: 32px; display: flex; align-items: center; gap: 10px; }
+  #add-amount-control label { font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; text-transform: uppercase; }
+  #add-amount { background: transparent; border: none; border-bottom: 0.5px solid rgba(255,255,255,0.2); padding: 2px 4px; font-size: 13px; color: rgba(255,255,255,0.45); outline: none; width: 44px; text-align: center; }
+  #add-amount:focus { color: rgba(255,255,255,0.8); border-bottom-color: rgba(255,255,255,0.5); }
+  #add-amount-control span { font-size: 11px; color: rgba(255,255,255,0.2); }
+  #flash { position: fixed; inset: 0; background: rgba(255,255,255,0.04); pointer-events: none; opacity: 0; }
+  #game-over { display: none; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+  #game-over h2 { font-size: 48px; font-weight: 200; color: #ff4444; letter-spacing: -0.02em; }
+  #game-over p { font-size: 13px; color: rgba(255,255,255,0.3); }
+  #total-msg { font-size: 11px; color: rgba(255,255,255,0.2); }
+  #restart-btn { background: transparent; border: 0.5px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 10px 32px; font-size: 13px; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+  #restart-btn:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.9); }
+  #hint { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 11px; color: rgba(255,255,255,0.15); letter-spacing: 0.08em; text-transform: uppercase; pointer-events: none; transition: opacity 0.5s; white-space: nowrap; }
+  #progress-bar { position: fixed; bottom: 0; left: 0; height: 2px; background: rgba(255,255,255,0.2); transition: width 0.9s linear, background-color 0.4s; width: 100%; }
   #progress-bar.danger { background: rgba(255,68,68,0.6); }
 </style>
 </head>
@@ -225,6 +210,39 @@
 
 <div id="setup">
   <h1>Study Timer</h1>
+
+  <div id="heatmap-section">
+    <div id="heatmap-header">
+      <span>study activity</span>
+      <div id="heatmap-legend">
+        <span>less</span>
+        <div class="legend-cell cell-empty"></div>
+        <div class="legend-cell cell-l1"></div>
+        <div class="legend-cell cell-l2"></div>
+        <div class="legend-cell cell-l3"></div>
+        <div class="legend-cell cell-l4"></div>
+        <span>more</span>
+      </div>
+    </div>
+    <div id="heatmap-scroll">
+      <div id="heatmap-inner">
+        <div id="month-labels"></div>
+        <div id="heatmap-body">
+          <div id="day-labels">
+            <div class="day-label"></div>
+            <div class="day-label">Mon</div>
+            <div class="day-label"></div>
+            <div class="day-label">Wed</div>
+            <div class="day-label"></div>
+            <div class="day-label">Fri</div>
+            <div class="day-label"></div>
+          </div>
+          <div id="heatmap-cols"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="field">
     <label>Starting seconds</label>
     <input type="number" id="start-time" placeholder="60" min="5" value="">
@@ -257,18 +275,13 @@
 </div>
 
 <div id="flash"></div>
+<div id="hm-tooltip"></div>
 
 <script>
-  let timeLeft = 0;
-  let maxTime = 0;
-  let addPerSpace = 15;
-  let interval = null;
-  let spaceCount = 0;
-  let running = false;
-  let sessionStart = null;
-  let db = null;
-  let baseTotalSeconds = 0; // total from DB before this session
-  let currentSessionSeconds = 0; // seconds elapsed this session
+  let timeLeft = 0, maxTime = 0, addPerSpace = 15;
+  let interval = null, spaceCount = 0, running = false;
+  let sessionStart = null, db = null;
+  let baseTotalSeconds = 0, currentSessionSeconds = 0;
 
   const setupEl = document.getElementById('setup');
   const timerScreen = document.getElementById('timer-screen');
@@ -279,30 +292,30 @@
   const addAmountInput = document.getElementById('add-amount');
   const hintEl = document.getElementById('hint');
   const flashEl = document.getElementById('flash');
+  const tooltip = document.getElementById('hm-tooltip');
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
 
   function openDB() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('StudyTimerDB', 3);
+      const req = indexedDB.open('StudyTimerDB', 4);
       req.onupgradeneeded = e => {
         const d = e.target.result;
         const tx = e.target.transaction;
-        // Migrate from old sessions store if it exists
         let migratedSeconds = 0;
         if (d.objectStoreNames.contains('sessions')) {
           const sessionStore = tx.objectStore('sessions');
           sessionStore.getAll().onsuccess = ev => {
             migratedSeconds = (ev.target.result || []).reduce((a, s) => a + (s.seconds || 0), 0);
-            if (!d.objectStoreNames.contains('meta')) {
-              d.createObjectStore('meta', { keyPath: 'key' });
-            }
-            if (migratedSeconds > 0) {
-              tx.objectStore('meta').put({ key: 'totalSeconds', value: migratedSeconds });
-            }
+            if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+            if (migratedSeconds > 0) tx.objectStore('meta').put({ key: 'totalSeconds', value: migratedSeconds });
           };
         }
-        if (!d.objectStoreNames.contains('meta')) {
-          d.createObjectStore('meta', { keyPath: 'key' });
-        }
+        if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+        if (!d.objectStoreNames.contains('daily')) d.createObjectStore('daily', { keyPath: 'date' });
       };
       req.onsuccess = e => resolve(e.target.result);
       req.onerror = e => reject(e);
@@ -310,7 +323,7 @@
   }
 
   function dbGet(key) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (!db) return resolve(null);
       const tx = db.transaction('meta', 'readonly');
       const req = tx.objectStore('meta').get(key);
@@ -325,9 +338,38 @@
     tx.objectStore('meta').put({ key, value });
   }
 
-  function getTotalStudied() {
-    return dbGet('totalSeconds').then(v => v || 0);
+  function dbGetDay(date) {
+    return new Promise(resolve => {
+      if (!db) return resolve(null);
+      const tx = db.transaction('daily', 'readonly');
+      const req = tx.objectStore('daily').get(date);
+      req.onsuccess = e => resolve(e.target.result ? e.target.result.seconds : 0);
+      req.onerror = () => resolve(0);
+    });
   }
+
+  function dbAddDay(date, seconds) {
+    return new Promise(resolve => {
+      if (!db) return resolve();
+      dbGetDay(date).then(existing => {
+        const tx = db.transaction('daily', 'readwrite');
+        tx.objectStore('daily').put({ date, seconds: (existing || 0) + seconds });
+        tx.oncomplete = resolve;
+      });
+    });
+  }
+
+  function dbGetAllDays() {
+    return new Promise(resolve => {
+      if (!db) return resolve([]);
+      const tx = db.transaction('daily', 'readonly');
+      const req = tx.objectStore('daily').getAll();
+      req.onsuccess = e => resolve(e.target.result || []);
+      req.onerror = () => resolve([]);
+    });
+  }
+
+  function getTotalStudied() { return dbGet('totalSeconds').then(v => v || 0); }
 
   function fmtDuration(s) {
     s = Math.floor(s);
@@ -339,13 +381,126 @@
     return m + 'm ' + sec + 's';
   }
 
+  function fmtDate(dateStr) {
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, mo - 1, d);
+    return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
   async function showTotalOnSetup() {
     const total = await getTotalStudied();
     const el = document.getElementById('total-studied');
     el.textContent = total > 0 ? fmtDuration(total) + ' studied total' : '';
   }
 
-  openDB().then(d => { db = d; showTotalOnSetup(); }).catch(() => {});
+  async function buildHeatmap() {
+    const allDays = await dbGetAllDays();
+    const dayMap = {};
+    allDays.forEach(r => { dayMap[r.date] = r.seconds; });
+
+    const maxSec = Math.max(...Object.values(dayMap), 1);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const endDate = new Date(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 364);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    const colsEl = document.getElementById('heatmap-cols');
+    const monthLabelsEl = document.getElementById('month-labels');
+    colsEl.innerHTML = '';
+    monthLabelsEl.innerHTML = '';
+
+    const CELL = 11, GAP = 3;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let colIndex = 0;
+    let lastMonth = -1;
+    const monthPositions = [];
+
+    let cur = new Date(startDate);
+    while (cur <= endDate) {
+      const col = document.createElement('div');
+      col.className = 'heatmap-col';
+
+      const month = cur.getMonth();
+      if (month !== lastMonth) {
+        monthPositions.push({ col: colIndex, label: months[month] });
+        lastMonth = month;
+      }
+
+      for (let dow = 0; dow < 7; dow++) {
+        const cell = document.createElement('div');
+        cell.className = 'heatmap-cell';
+        const cellDate = new Date(cur);
+        cellDate.setDate(cellDate.getDate() + dow);
+
+        if (cellDate > endDate) {
+          cell.style.visibility = 'hidden';
+        } else {
+          const dk = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
+          const sec = dayMap[dk] || 0;
+
+          if (sec === 0) {
+            cell.classList.add('cell-empty');
+          } else {
+            const ratio = sec / maxSec;
+            if (ratio < 0.25) cell.classList.add('cell-l1');
+            else if (ratio < 0.5) cell.classList.add('cell-l2');
+            else if (ratio < 0.75) cell.classList.add('cell-l3');
+            else cell.classList.add('cell-l4');
+          }
+
+          const isToday = cellDate.getTime() === today.getTime();
+          if (isToday) cell.classList.add('cell-today');
+
+          cell.addEventListener('mouseenter', function(e) {
+            const txt = sec > 0
+              ? fmtDuration(sec) + ' studied\n' + fmtDate(dk)
+              : 'No study\n' + fmtDate(dk);
+            tooltip.innerHTML = txt.replace('\n', '<br>');
+            tooltip.style.display = 'block';
+          });
+          cell.addEventListener('mousemove', function(e) {
+            tooltip.style.left = (e.clientX + 12) + 'px';
+            tooltip.style.top = (e.clientY - 36) + 'px';
+          });
+          cell.addEventListener('mouseleave', function() {
+            tooltip.style.display = 'none';
+          });
+        }
+
+        col.appendChild(cell);
+      }
+
+      colsEl.appendChild(col);
+      cur.setDate(cur.getDate() + 7);
+      colIndex++;
+    }
+
+    const totalWidth = colIndex * (CELL + GAP);
+    monthLabelsEl.style.width = totalWidth + 'px';
+    monthLabelsEl.style.position = 'relative';
+    monthPositions.forEach((mp, i) => {
+      const span = document.createElement('span');
+      span.textContent = mp.label;
+      span.style.cssText = 'position:absolute;font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;';
+      span.style.left = (mp.col * (CELL + GAP)) + 'px';
+      span.style.top = '0';
+      monthLabelsEl.appendChild(span);
+    });
+
+    setTimeout(() => {
+      const scroll = document.getElementById('heatmap-scroll');
+      scroll.scrollLeft = scroll.scrollWidth;
+    }, 50);
+  }
+
+  openDB().then(d => {
+    db = d;
+    showTotalOnSetup();
+    buildHeatmap();
+  }).catch(() => {});
 
   function updateLiveTotal() {
     const total = baseTotalSeconds + currentSessionSeconds;
@@ -364,20 +519,10 @@
     display.textContent = fmt(timeLeft);
     const ratio = Math.max(0, timeLeft / maxTime);
     progressBar.style.width = (ratio * 100) + '%';
-
-    if (timeLeft < 0) {
-      display.className = 'negative';
-      progressBar.className = 'danger';
-    } else if (timeLeft <= 10) {
-      display.className = 'critical';
-      progressBar.className = 'danger';
-    } else if (timeLeft <= 20) {
-      display.className = 'danger';
-      progressBar.className = 'danger';
-    } else {
-      display.className = '';
-      progressBar.className = '';
-    }
+    if (timeLeft < 0) { display.className = 'negative'; progressBar.className = 'danger'; }
+    else if (timeLeft <= 10) { display.className = 'critical'; progressBar.className = 'danger'; }
+    else if (timeLeft <= 20) { display.className = 'danger'; progressBar.className = 'danger'; }
+    else { display.className = ''; progressBar.className = ''; }
   }
 
   function tick() {
@@ -387,9 +532,17 @@
     updateLiveTotal();
   }
 
-  function endGame() {
+  async function saveSession() {
+    if (currentSessionSeconds > 0) {
+      dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds);
+      await dbAddDay(todayKey(), currentSessionSeconds);
+    }
+  }
+
+  async function endGame() {
     clearInterval(interval);
     running = false;
+    await saveSession();
     timerScreen.style.display = 'none';
     gameOverEl.style.display = 'flex';
     document.getElementById('score-msg').textContent =
@@ -419,19 +572,15 @@
   async function startTimer(st, at) {
     baseTotalSeconds = await getTotalStudied();
     currentSessionSeconds = 0;
-    timeLeft = st;
-    maxTime = st;
-    addPerSpace = at;
-    spaceCount = 0;
-    sessionStart = Date.now();
+    timeLeft = st; maxTime = st; addPerSpace = at;
+    spaceCount = 0; sessionStart = Date.now();
     addAmountInput.value = at;
     setupEl.style.display = 'none';
     gameOverEl.style.display = 'none';
     timerScreen.style.display = 'flex';
     hintEl.style.opacity = '1';
     running = true;
-    updateDisplay();
-    updateLiveTotal();
+    updateDisplay(); updateLiveTotal();
     interval = setInterval(tick, 1000);
     setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
@@ -440,6 +589,7 @@
     gameOverEl.style.display = 'none';
     setupEl.style.display = 'flex';
     showTotalOnSetup();
+    buildHeatmap();
   });
 
   addAmountInput.addEventListener('input', () => {
@@ -447,9 +597,10 @@
     if (v > 0) addPerSpace = v;
   });
 
-  window.addEventListener('beforeunload', e => {
+  window.addEventListener('beforeunload', async e => {
     if (running && currentSessionSeconds > 0) {
       dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds);
+      dbAddDay(todayKey(), currentSessionSeconds);
       e.preventDefault();
       e.returnValue = '';
     }
