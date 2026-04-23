@@ -551,13 +551,8 @@
     if (!running) return;
 
     // Recalculate from wall clock — immune to tab throttling
-    const timeLeft = computeTimeLeft();
     updateDisplay();
     updateLiveTotal();
-
-    if (timeLeft <= -10) {
-      endGame();
-    }
   }
 
   async function saveSession() {
