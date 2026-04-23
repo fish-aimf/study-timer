@@ -278,10 +278,15 @@
 <div id="hm-tooltip"></div>
 
 <script>
-  let timeLeft = 0, maxTime = 0, addPerSpace = 15;
+  let maxTime = 0, addPerSpace = 15;
   let interval = null, spaceCount = 0, running = false;
   let sessionStart = null, db = null;
-  let baseTotalSeconds = 0, currentSessionSeconds = 0;
+  let baseTotalSeconds = 0;
+
+  // Wall-clock tracking (fixes tab throttling)
+  let wallStart = null;       // Date.now() when timer started
+  let initialSeconds = 0;     // starting seconds given at launch
+  let bonusSeconds = 0;       // total seconds added via spacebar
 
   const setupEl = document.getElementById('setup');
   const timerScreen = document.getElementById('timer-screen');
@@ -502,8 +507,24 @@
     buildHeatmap();
   }).catch(() => {});
 
+  // Returns elapsed wall-clock seconds since timer started
+  function elapsedSeconds() {
+    if (!wallStart) return 0;
+    return (Date.now() - wallStart) / 1000;
+  }
+
+  // Current session seconds = wall-clock elapsed (capped to what's been counted so far on game over)
+  function currentSessionSeconds() {
+    return Math.floor(elapsedSeconds());
+  }
+
+  // Remaining time = initial + bonus - elapsed
+  function computeTimeLeft() {
+    return initialSeconds + bonusSeconds - elapsedSeconds();
+  }
+
   function updateLiveTotal() {
-    const total = baseTotalSeconds + currentSessionSeconds;
+    const total = baseTotalSeconds + currentSessionSeconds();
     liveTotalEl.textContent = fmtDuration(total) + ' total';
   }
 
@@ -516,6 +537,7 @@
   }
 
   function updateDisplay() {
+    const timeLeft = computeTimeLeft();
     display.textContent = fmt(timeLeft);
     const ratio = Math.max(0, timeLeft / maxTime);
     progressBar.style.width = (ratio * 100) + '%';
@@ -526,16 +548,23 @@
   }
 
   function tick() {
-    timeLeft -= 1;
-    currentSessionSeconds += 1;
+    if (!running) return;
+
+    // Recalculate from wall clock — immune to tab throttling
+    const timeLeft = computeTimeLeft();
     updateDisplay();
     updateLiveTotal();
+
+    if (timeLeft <= -10) {
+      endGame();
+    }
   }
 
   async function saveSession() {
-    if (currentSessionSeconds > 0) {
-      dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds);
-      await dbAddDay(todayKey(), currentSessionSeconds);
+    const sessionSecs = currentSessionSeconds();
+    if (sessionSecs > 0) {
+      dbSet('totalSeconds', baseTotalSeconds + sessionSecs);
+      await dbAddDay(todayKey(), sessionSecs);
     }
   }
 
@@ -547,7 +576,7 @@
     gameOverEl.style.display = 'flex';
     document.getElementById('score-msg').textContent =
       spaceCount === 1 ? '1 question solved' : spaceCount + ' questions solved';
-    const total = baseTotalSeconds + currentSessionSeconds;
+    const total = baseTotalSeconds + currentSessionSeconds();
     document.getElementById('total-msg').textContent =
       total > 0 ? fmtDuration(total) + ' studied total' : '';
   }
@@ -571,9 +600,13 @@
 
   async function startTimer(st, at) {
     baseTotalSeconds = await getTotalStudied();
-    currentSessionSeconds = 0;
-    timeLeft = st; maxTime = st; addPerSpace = at;
-    spaceCount = 0; sessionStart = Date.now();
+    initialSeconds = st;
+    bonusSeconds = 0;
+    wallStart = Date.now();
+    maxTime = st;
+    addPerSpace = at;
+    spaceCount = 0;
+    sessionStart = Date.now();
     addAmountInput.value = at;
     setupEl.style.display = 'none';
     gameOverEl.style.display = 'none';
@@ -581,7 +614,7 @@
     hintEl.style.opacity = '1';
     running = true;
     updateDisplay(); updateLiveTotal();
-    interval = setInterval(tick, 1000);
+    interval = setInterval(tick, 250); // poll 4x/sec so we catch tab wake-up quickly
     setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
 
@@ -597,10 +630,18 @@
     if (v > 0) addPerSpace = v;
   });
 
+  // When tab becomes visible again, immediately refresh the display
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && running) {
+      updateDisplay();
+      updateLiveTotal();
+    }
+  });
+
   window.addEventListener('beforeunload', async e => {
-    if (running && currentSessionSeconds > 0) {
-      dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds);
-      dbAddDay(todayKey(), currentSessionSeconds);
+    if (running && currentSessionSeconds() > 0) {
+      dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds());
+      dbAddDay(todayKey(), currentSessionSeconds());
       e.preventDefault();
       e.returnValue = '';
     }
@@ -609,8 +650,9 @@
   document.addEventListener('keydown', e => {
     if (e.key === ' ' && running) {
       e.preventDefault();
-      timeLeft += addPerSpace;
-      if (timeLeft > maxTime) maxTime = timeLeft;
+      bonusSeconds += addPerSpace;
+      const newTimeLeft = computeTimeLeft();
+      if (newTimeLeft > maxTime) maxTime = newTimeLeft;
       spaceCount++;
       updateDisplay();
       flashScreen();
