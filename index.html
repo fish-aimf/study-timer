@@ -201,6 +201,21 @@
   #total-msg { font-size: 11px; color: rgba(255,255,255,0.2); }
   #restart-btn { background: transparent; border: 0.5px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 10px 32px; font-size: 13px; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.15s; margin-top: 4px; }
   #restart-btn:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.9); }
+  #save-actions { display: flex; gap: 10px; margin-top: 4px; }
+  #save-session-btn, #discard-session-btn {
+    background: transparent;
+    border: 0.5px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #save-session-btn:hover, #discard-session-btn:hover {
+    border-color: rgba(255,255,255,0.35);
+    color: rgba(255,255,255,0.9);
+  }
   #hint { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); font-size: 11px; color: rgba(255,255,255,0.15); letter-spacing: 0.08em; text-transform: uppercase; pointer-events: none; transition: opacity 0.5s; white-space: nowrap; }
   #progress-bar { position: fixed; bottom: 0; left: 0; height: 2px; background: rgba(255,255,255,0.2); transition: width 0.9s linear, background-color 0.4s; width: 100%; }
   #progress-bar.danger { background: rgba(255,68,68,0.6); }
@@ -271,7 +286,10 @@
   <h2>Time's up.</h2>
   <p id="score-msg"></p>
   <div id="total-msg"></div>
-  <button id="restart-btn">Try again</button>
+  <div id="save-actions">
+    <button id="save-session-btn">Save Session</button>
+    <button id="discard-session-btn">Discard</button>
+  </div>
 </div>
 
 <div id="flash"></div>
@@ -282,6 +300,7 @@
   let interval = null, spaceCount = 0, running = false;
   let sessionStart = null, db = null;
   let baseTotalSeconds = 0;
+  let pendingSession = null;
 
   // Wall-clock tracking (fixes tab throttling)
   let wallStart = null;       // Date.now() when timer started
@@ -550,30 +569,74 @@
   function tick() {
     if (!running) return;
 
-    // Recalculate from wall clock — immune to tab throttling
+    // Recalculate from wall clock — immune to tab throttling.
     updateDisplay();
     updateLiveTotal();
-  }
 
-  async function saveSession() {
-    const sessionSecs = currentSessionSeconds();
-    if (sessionSecs > 0) {
-      dbSet('totalSeconds', baseTotalSeconds + sessionSecs);
-      await dbAddDay(todayKey(), sessionSecs);
+    // End the session once the countdown reaches zero.
+    if (computeTimeLeft() <= 0) {
+      endGame();
     }
   }
 
-  async function endGame() {
+  async function commitPendingSession() {
+    if (!pendingSession || !db) return;
+
+    const session = pendingSession;
+    pendingSession = null;
+
+    // Commit exactly once, only after the user explicitly chooses Save Session.
+    const currentTotal = await getTotalStudied();
+    dbSet('totalSeconds', currentTotal + session.seconds);
+    await dbAddDay(todayKey(new Date(session.startTime)), session.seconds);
+
+    await showTotalOnSetup();
+    await buildHeatmap();
+
+    timerScreen.style.display = 'none';
+    gameOverEl.style.display = 'none';
+    setupEl.style.display = 'flex';
+  }
+
+  function discardPendingSession() {
+    // Intentionally do not write anything to IndexedDB.
+    // This mirrors the safe Research Time Tracker pattern:
+    // closing/cancelling cannot accidentally commit a session.
+    pendingSession = null;
+    timerScreen.style.display = 'none';
+    gameOverEl.style.display = 'none';
+    setupEl.style.display = 'flex';
+    showTotalOnSetup();
+    buildHeatmap();
+  }
+
+  function endGame() {
+    if (!running) return;
+
     clearInterval(interval);
+    interval = null;
     running = false;
-    await saveSession();
+
+    const endTime = Date.now();
+    const sessionSecs = Math.max(
+      0,
+      Math.floor((endTime - sessionStart) / 1000)
+    );
+
+    pendingSession = {
+      startTime: sessionStart,
+      endTime,
+      seconds: sessionSecs
+    };
+
     timerScreen.style.display = 'none';
     gameOverEl.style.display = 'flex';
+
     document.getElementById('score-msg').textContent =
       spaceCount === 1 ? '1 question solved' : spaceCount + ' questions solved';
-    const total = baseTotalSeconds + currentSessionSeconds();
+
     document.getElementById('total-msg').textContent =
-      total > 0 ? fmtDuration(total) + ' studied total' : '';
+      sessionSecs > 0 ? fmtDuration(sessionSecs) + ' in this session' : '';
   }
 
   function flashScreen() {
@@ -613,11 +676,12 @@
     setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
 
-  document.getElementById('restart-btn').addEventListener('click', () => {
-    gameOverEl.style.display = 'none';
-    setupEl.style.display = 'flex';
-    showTotalOnSetup();
-    buildHeatmap();
+  document.getElementById('save-session-btn').addEventListener('click', () => {
+    commitPendingSession();
+  });
+
+  document.getElementById('discard-session-btn').addEventListener('click', () => {
+    discardPendingSession();
   });
 
   addAmountInput.addEventListener('input', () => {
@@ -633,14 +697,9 @@
     }
   });
 
-  window.addEventListener('beforeunload', async e => {
-    if (running && currentSessionSeconds() > 0) {
-      dbSet('totalSeconds', baseTotalSeconds + currentSessionSeconds());
-      dbAddDay(todayKey(), currentSessionSeconds());
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  });
+  // No beforeunload handler.
+  // Closing the page never commits a running or pending session.
+  // A session is saved only after the user explicitly presses Save Session.
 
   document.addEventListener('keydown', e => {
     if (e.key === ' ' && running) {
