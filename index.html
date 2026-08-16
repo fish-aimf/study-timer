@@ -22,7 +22,7 @@
     flex-direction: column;
     align-items: center;
     gap: 28px;
-    width: 360px;
+    width: min(760px, calc(100vw - 40px));
     padding: 32px 0;
   }
   #setup h1 {
@@ -170,11 +170,21 @@
     display: none;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    width: 100%;
-    height: 100vh;
     justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    gap: 24px;
+    text-align: center;
+    position: relative;
   }
+
+  #session-status {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
   #time-display {
     font-size: clamp(80px, 18vw, 160px);
     font-weight: 200;
@@ -183,6 +193,30 @@
     transition: color 0.4s;
     color: #fff;
     font-variant-numeric: tabular-nums;
+  }
+
+  #session-start-display {
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+    font-variant-numeric: tabular-nums;
+    margin-top: -8px;
+  }
+
+  #stop-study-btn {
+    background: transparent;
+    border: 0.5px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 11px 34px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+
+  #stop-study-btn:hover {
+    border-color: rgba(255,255,255,0.4);
+    color: #fff;
   }
   #time-display.danger { color: #ff4444; }
   #time-display.critical { color: #ff1111; animation: pulse 0.5s infinite alternate; }
@@ -271,13 +305,19 @@
 </div>
 
 <div id="timer-screen">
+  <div id="session-status">Study session in progress</div>
   <div id="time-display">00:00</div>
+  <div id="session-start-display"></div>
   <div id="live-total"></div>
+
+  <button id="stop-study-btn">Stop Study Session</button>
+
   <div id="add-amount-control">
     <label>+sec</label>
     <input type="number" id="add-amount" min="1" max="999">
     <span>/ space</span>
   </div>
+
   <div id="hint">space to add time</div>
   <div id="progress-bar"></div>
 </div>
@@ -312,6 +352,7 @@
   const gameOverEl = document.getElementById('game-over');
   const display = document.getElementById('time-display');
   const liveTotalEl = document.getElementById('live-total');
+  const sessionStartDisplay = document.getElementById('session-start-display');
   const progressBar = document.getElementById('progress-bar');
   const addAmountInput = document.getElementById('add-amount');
   const hintEl = document.getElementById('hint');
@@ -394,6 +435,16 @@
   }
 
   function getTotalStudied() { return dbGet('totalSeconds').then(v => v || 0); }
+
+  function fmtDateTime(timestamp) {
+    return new Date(timestamp).toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
 
   function fmtDuration(s) {
     s = Math.floor(s);
@@ -665,6 +716,7 @@
     addPerSpace = at;
     spaceCount = 0;
     sessionStart = Date.now();
+    sessionStartDisplay.textContent = 'Started ' + fmtDateTime(sessionStart);
     addAmountInput.value = at;
     setupEl.style.display = 'none';
     gameOverEl.style.display = 'none';
@@ -675,6 +727,10 @@
     interval = setInterval(tick, 250); // poll 4x/sec so we catch tab wake-up quickly
     setTimeout(() => { hintEl.style.opacity = '0'; }, 3000);
   }
+
+  document.getElementById('stop-study-btn').addEventListener('click', () => {
+    endGame();
+  });
 
   document.getElementById('save-session-btn').addEventListener('click', () => {
     commitPendingSession();
