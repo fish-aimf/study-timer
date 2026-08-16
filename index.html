@@ -620,14 +620,12 @@
   function tick() {
     if (!running) return;
 
-    // Recalculate from wall clock — immune to tab throttling.
+    // Recalculate from wall clock — immune to tab throttling. The countdown
+    // is intentionally allowed to run past zero and go negative — there is
+    // no auto-stop here. The only way a session ends is the person clicking
+    // "Stop Study Session" (see the stop-study-btn handler below).
     updateDisplay();
     updateLiveTotal();
-
-    // End the session once the countdown reaches zero.
-    if (computeTimeLeft() <= 0) {
-      endGame();
-    }
   }
 
   async function commitPendingSession() {
